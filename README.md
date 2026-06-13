@@ -1,8 +1,7 @@
 # tandem-malfunction-parser
 
-Tandem t:slim X2 / Mobi malfunction code parser — a single-page web app that
-decodes a malfunction code into the subsystem it relates to and its fault
-details.
+Tandem t:slim X2 / Mobi malfunction bitmask parser — a single-page web app that
+decodes a status bitmask into the subsystems / notifications it represents.
 
 **Live site:** enable GitHub Pages for this repo (Settings → Pages → Source:
 *GitHub Actions*). The app is then served at
@@ -10,48 +9,48 @@ details.
 
 ## What it does
 
-Enter a malfunction code in the form shown on the pump screen:
+Enter a bitmask value (decimal, hex, or a `codeA, codeB` pair) and choose how to
+interpret it. The app reads it as a 64-bit value and lists every set bit mapped
+to its entry — exactly like pumpx2's `MalfunctionBitmaskStatusResponse` and the
+alert/alarm/CGM/reminder status responses.
 
 ```
-aamId-0xfaultId        e.g.  12-0x2071
+0x1000   -> bit 12 -> VIBE (Vibrator motor)
+4097     -> bits 0, 12 -> SOFTWARE, VIBE
 ```
 
-The app reports:
+Categories:
 
-- **Subsystem** — which pump subsystem the code relates to (e.g. `12` → Vibrator
-  motor).
-- **aamId** — the subsystem index (0–25).
-- **faultId** — the specific fault-locator value, in hex and decimal.
-- **Warnings** — whether the code is one pumpx2 considers *ignorable* (i.e. it
-  usually appears concurrently with a normal alarm and isn't a real
-  malfunction), and any documented meaning for the specific code.
+- **Malfunction** (`MalfunctionBitmaskStatusResponse.MalfunctionType`, bits 0–25)
+- **Alarm** (`AlarmStatusResponse.AlarmResponseType`, with descriptions)
+- **Alert** (`AlertStatusResponse.AlertResponseType`, with descriptions)
+- **CGM Alert** (`CGMAlertStatusResponse.CGMAlert`)
+- **Reminder** (`ReminderStatusResponse.ReminderType`)
 
-Codes can also be deep-linked with `?code=12-0x2071`.
+You can deep-link with `?code=0x1000&cat=MALFUNCTION`.
 
-## How the code is structured
+## How decoding works
 
-This logic is ported from [pumpx2](https://github.com/jwoglom/pumpx2). The
-displayed malfunction code comes from `HighestAamResponse`, which pumpx2 formats
-as:
+This logic is ported from [pumpx2](https://github.com/jwoglom/pumpx2). Each
+status response is a `uint64` bitmask; `fromBitmask` tests each bit and the bit
+index maps to an enum entry. For example:
 
 ```java
-String.format("%d-0x%s", aamId, Long.toString(faultId, 16));  // -> "12-0x2071"
+// MalfunctionBitmaskStatusResponse
+this.bitmask = Bytes.readUint64(raw, 0);
+this.malfunctions = MalfunctionType.fromBitmask(bitmask);  // bit N -> subsystem N
 ```
 
-- `aamId` is an index into a 26-entry subsystem table
-  (`MalfunctionBitmaskStatusResponse.MalfunctionType`, bits 0–25).
-- `faultId` is a more specific fault-locator value, displayed in hex.
-
-pumpx2 also maintains a small list of *ignorable* codes (`IGNORABLE_CODES`) that
-look like malfunctions but occur alongside ordinary alarms (e.g. `3-0x2026` with
-the Pump Reset Alarm).
+The `codeA, codeB` input form mirrors the
+`MalfunctionBitmaskStatusResponse(long codeA, long codeB)` constructor, which
+stores the two 32-bit halves little-endian as one `uint64`
+(`value = codeA | (codeB << 32)`).
 
 ## Accuracy / disclaimer
 
-This tool reliably decodes the **structure** of a code (subsystem + faultId).
-The specific human meaning of a given `faultId` is largely community-sourced and
-unofficial — only a handful of codes have documented descriptions. Subsystem
-labels are derived from the pumpx2 enum names.
+Bit → entry mappings, names, and descriptions are all derived from the pumpx2
+enums. Bits with no defined mapping (e.g. `DEFAULT_*` placeholders, or
+malfunction bits above 25) are listed as undefined.
 
 Not affiliated with Tandem Diabetes Care. For any actual pump malfunction,
 contact Tandem support.
@@ -61,7 +60,7 @@ contact Tandem support.
 | File | Purpose |
 | --- | --- |
 | `index.html` | Page markup |
-| `parser.js` | Parsing logic + data tables (subsystems, ignorable/known codes) |
+| `parser.js` | `decodeBitmask` + the full ID→name/description data tables |
 | `app.js` | UI glue (form handling, rendering, deep-linking) |
 | `styles.css` | Styling |
 | `.github/workflows/pages.yml` | Deploys the static site to GitHub Pages |
@@ -70,6 +69,6 @@ No build step or dependencies — it's plain static HTML/CSS/JS.
 
 ## Extending the data
 
-To add a documented code or subsystem label, edit the tables at the top of
-`parser.js`: `KNOWN_CODES`, `IGNORABLE_CODES`, `SUBSYSTEM_LABELS`, and
-`MALFUNCTION_TYPES`.
+To add or correct an entry, edit the data tables at the top of `parser.js`:
+`MALFUNCTION_TYPES`, `ALARM_TYPES`, `ALERT_TYPES`, `CGM_ALERTS`,
+`REMINDER_TYPES`.

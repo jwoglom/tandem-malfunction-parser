@@ -212,79 +212,96 @@ function lookup(table, index) {
 }
 
 /**
- * Parse a displayed malfunction code into structured data.
- * Accepts forgiving forms: "12-0x2071", "12 0x2071", "12-2071" (faultId hex
- * assumed), "12/0x2071", and surrounding whitespace.
+ * Turn a user-entered value into a 64-bit BigInt.
+ * Accepts:
+ *   - hex with prefix:        0x1000
+ *   - hex without prefix:     1000a (any token containing a-f)
+ *   - decimal:                4096
+ *   - two comma/space halves: "codeA, codeB" -> codeA | (codeB << 32)
+ *                             (matches MalfunctionBitmaskStatusResponse(codeA, codeB),
+ *                              which stores them little-endian as one uint64)
+ * @returns {BigInt|null}
+ */
+function toBitmaskValue(input) {
+  let s = String(input).trim().toLowerCase();
+  if (!s) return null;
+
+  // codeA / codeB pair (two 32-bit halves combined little-endian).
+  const pair = s.split(/\s*[,;]\s*|\s+/).filter(Boolean);
+  if (pair.length === 2) {
+    const a = parseSingle(pair[0]);
+    const b = parseSingle(pair[1]);
+    if (a === null || b === null) return null;
+    return (a & 0xffffffffn) | ((b & 0xffffffffn) << 32n);
+  }
+
+  return parseSingle(s);
+}
+
+function parseSingle(token) {
+  const s = token.trim().toLowerCase();
+  if (/^0x[0-9a-f]+$/.test(s)) return BigInt(s);
+  if (/^[0-9]+$/.test(s)) return BigInt(s); // decimal
+  if (/^[0-9a-f]+$/.test(s)) return BigInt("0x" + s); // hex without prefix
+  return null;
+}
+
+/**
+ * Decode a malfunction/AAM bitmask into the set bits, mapped against every
+ * category. This mirrors MalfunctionBitmaskStatusResponse.parse +
+ * MalfunctionType.fromBitmask (and the equivalent for alerts/alarms/etc):
+ * read the value as a uint64 and test each bit.
  *
  * @param {string} input
  * @returns {{ok: boolean, error?: string, ...}}
  */
-function parseMalfunctionCode(input) {
-  if (input == null) {
-    return { ok: false, error: "No code provided." };
-  }
-  const raw = String(input).trim();
-  if (!raw) {
-    return { ok: false, error: "No code provided." };
+function decodeBitmask(input) {
+  if (input == null || String(input).trim() === "") {
+    return { ok: false, error: "Enter a bitmask value, e.g. 4096 or 0x1000." };
   }
 
-  // aamId is decimal; faultId is hex (optionally 0x-prefixed).
-  // Separator may be '-', whitespace, '/' or ':'.
-  const m = raw.match(/^(\d+)\s*[-/:\s]\s*(?:0x)?([0-9a-fA-F]+)$/);
-  if (!m) {
+  const value = toBitmaskValue(input);
+  if (value === null) {
     return {
       ok: false,
-      error: 'Could not parse. Expected a code like "12-0x2071" (aamId-0xfaultId).',
+      error: 'Could not parse. Enter a number like 4096, 0x1000, or "codeA, codeB".',
     };
   }
-
-  const aamId = parseInt(m[1], 10);
-  const faultId = parseInt(m[2], 16);
-
-  if (!Number.isFinite(aamId) || !Number.isFinite(faultId)) {
-    return { ok: false, error: "Could not parse the numeric parts of the code." };
+  if (value < 0n) {
+    return { ok: false, error: "Value must be non-negative." };
   }
 
-  const faultHex = faultId.toString(16);
-  const canonical = `${aamId}-0x${faultHex}`;
+  const bits = [];
+  for (let i = 0; i < 64; i++) {
+    if ((value >> BigInt(i)) & 1n) bits.push(i);
+  }
 
-  // The aamId is a shared bit index; interpret it across every category.
-  const interpretations = [];
-  for (const cat of CATEGORIES) {
-    const entry = lookup(cat.table, aamId);
-    if (entry) {
-      interpretations.push({
-        category: cat.key,
-        categoryLabel: cat.label,
-        aamType: cat.aamType,
-        name: entry.name,
-        description: entry.desc,
-      });
+  const categories = CATEGORIES.map((cat) => {
+    const entries = [];
+    const undefinedBits = [];
+    for (const b of bits) {
+      const e = lookup(cat.table, b);
+      if (e) {
+        entries.push({ bit: b, name: e.name, description: e.desc });
+      } else {
+        undefinedBits.push(b);
+      }
     }
-  }
-
-  const malfunction = interpretations.find((i) => i.category === "MALFUNCTION") || null;
-  // Concurrent alert/alarm with this same id is why some codes are "ignorable".
-  const concurrent = interpretations.filter(
-    (i) => i.category === "ALARM" || i.category === "ALERT"
-  );
-
-  const ignorableKey = `${aamId}-${faultId}`;
-  const ignorable = lookup(IGNORABLE_CODES, ignorableKey);
-  const known = lookup(KNOWN_CODES, canonical);
+    return {
+      key: cat.key,
+      label: cat.label,
+      aamType: cat.aamType,
+      entries,
+      undefinedBits,
+    };
+  });
 
   return {
     ok: true,
-    canonical,
-    aamId,
-    faultId,
-    faultHex: `0x${faultHex}`,
-    faultDecimal: faultId,
-    malfunction, // {name, description, ...} or null if aamId outside 0-25
-    interpretations, // across all 5 categories
-    concurrent, // alarm/alert entries sharing this id
-    ignorable, // string explanation or null
-    known, // string description or null
+    valueHex: "0x" + value.toString(16),
+    valueDec: value.toString(10),
+    bits,
+    categories,
   };
 }
 
@@ -301,5 +318,8 @@ const PARSER_DATA = {
 };
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = Object.assign({ parseMalfunctionCode }, PARSER_DATA);
+  module.exports = Object.assign(
+    { decodeBitmask, toBitmaskValue },
+    PARSER_DATA
+  );
 }
