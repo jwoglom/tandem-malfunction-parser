@@ -16,7 +16,8 @@
         <h1>Tandem Malfunction Code Parser</h1>
         <p class="subtitle">
           Decode a Tandem t:slim X2 / Mobi malfunction code into its subsystem
-          and fault details.
+          and fault details, cross-referenced against every alert, alarm, CGM
+          alert, and reminder that shares the same id.
         </p>
       </header>
 
@@ -40,11 +41,14 @@
             <button type="button" class="example" data-code="12-0x2071">
               12-0x2071
             </button>
-            <button type="button" class="example" data-code="9-0x1004">
-              9-0x1004
+            <button type="button" class="example" data-code="2-0x1004">
+              2-0x1004
             </button>
             <button type="button" class="example" data-code="3-0x2026">
               3-0x2026
+            </button>
+            <button type="button" class="example" data-code="18-0x2077">
+              18-0x2077
             </button>
           </p>
         </form>
@@ -54,10 +58,10 @@
 
       <footer>
         <p>
-          Subsystem labels are derived from
-          <a href="https://github.com/jwoglom/pumpx2" rel="noopener"
-            >pumpx2</a
-          >. This tool reliably decodes the <em>structure</em> of a code; the
+          All subsystem, alert, alarm, CGM-alert and reminder names and
+          descriptions are derived from
+          <a href="https://github.com/jwoglom/pumpx2" rel="noopener">pumpx2</a>.
+          This tool reliably decodes the <em>structure</em> of a code; the
           specific meaning of a <code>faultId</code> is largely
           community-sourced and unofficial. Not affiliated with Tandem Diabetes
           Care.
