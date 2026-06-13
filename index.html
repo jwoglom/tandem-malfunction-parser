@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tandem Malfunction Code Parser</title>
+    <meta
+      name="description"
+      content="Decode Tandem t:slim X2 / Mobi malfunction codes (aamId-0xfaultId)."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <h1>Tandem Malfunction Code Parser</h1>
+        <p class="subtitle">
+          Decode a Tandem t:slim X2 / Mobi malfunction code into its subsystem
+          and fault details.
+        </p>
+      </header>
+
+      <section class="card">
+        <label for="code-input" class="field-label">Malfunction code</label>
+        <form id="parse-form" autocomplete="off">
+          <div class="input-row">
+            <input
+              id="code-input"
+              type="text"
+              inputmode="text"
+              spellcheck="false"
+              placeholder="e.g. 12-0x2071"
+              aria-describedby="input-hint"
+            />
+            <button type="submit">Parse</button>
+          </div>
+          <p id="input-hint" class="hint">
+            Format: <code>aamId-0xfaultId</code> (the code shown on the pump
+            screen). Examples:
+            <button type="button" class="example" data-code="12-0x2071">
+              12-0x2071
+            </button>
+            <button type="button" class="example" data-code="9-0x1004">
+              9-0x1004
+            </button>
+            <button type="button" class="example" data-code="3-0x2026">
+              3-0x2026
+            </button>
+          </p>
+        </form>
+      </section>
+
+      <section id="result" class="card result" hidden aria-live="polite"></section>
+
+      <footer>
+        <p>
+          Subsystem labels are derived from
+          <a href="https://github.com/jwoglom/pumpx2" rel="noopener"
+            >pumpx2</a
+          >. This tool reliably decodes the <em>structure</em> of a code; the
+          specific meaning of a <code>faultId</code> is largely
+          community-sourced and unofficial. Not affiliated with Tandem Diabetes
+          Care.
+        </p>
+      </footer>
+    </main>
+
+    <script src="parser.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
