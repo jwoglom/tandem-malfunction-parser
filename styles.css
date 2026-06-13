@@ -93,6 +93,37 @@ button[type="submit"]:hover {
   background: var(--accent-strong);
 }
 
+.field-label {
+  margin-top: 0.9rem;
+}
+
+select {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  font-size: 1rem;
+  background: #0b1220;
+  color: var(--text);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+}
+
+.bit-chip {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #0ea5e9;
+  color: #04141f;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 .hint {
   margin: 0.75rem 0 0;
   font-size: 0.875rem;
