@@ -119,6 +119,12 @@
   }
 
   function run() {
+    const value = input.value.trim();
+    // Persist the entered code in the URL hash so it can be shared / restored.
+    const newHash = value ? "#" + encodeURIComponent(value) : "";
+    if (newHash !== window.location.hash) {
+      history.replaceState(null, "", window.location.pathname + window.location.search + newHash);
+    }
     render(decodeBitmask(input.value), categorySelect.value);
   }
 
