@@ -1,9 +1,10 @@
-/* UI glue for the Tandem malfunction code parser. */
+/* UI glue for the Tandem malfunction bitmask parser. */
 (function () {
   "use strict";
 
   const form = document.getElementById("parse-form");
   const input = document.getElementById("code-input");
+  const categorySelect = document.getElementById("category-select");
   const result = document.getElementById("result");
 
   function esc(s) {
@@ -26,35 +27,26 @@
       .replace(/\b([a-z])/g, function (_, c) {
         return c.toUpperCase();
       })
-      .replace(/\b(Cgm|Iq|Usb|Bg|Rtc|Msp|Arm|Ble|Btle|Ap|P2|Lipo|Nvm)\b/gi, function (w) {
-        return w.toUpperCase();
-      });
+      .replace(
+        /\b(Cgm|Iq|Usb|Bg|Rtc|Msp|Arm|Ble|Btle|Ap|P2|Lipo|Nvm)\b/gi,
+        function (w) {
+          return w.toUpperCase();
+        }
+      );
   }
 
-  function row(label, value) {
-    return (
-      '<div class="detail-row"><span class="detail-label">' +
-      esc(label) +
-      '</span><span class="detail-value">' +
-      value +
-      "</span></div>"
-    );
-  }
-
-  function interpRow(i) {
-    const desc = i.description
-      ? '<div class="interp-desc">' + esc(i.description) + "</div>"
+  function entryRow(e) {
+    const desc = e.description
+      ? '<div class="interp-desc">' + esc(e.description) + "</div>"
       : '<div class="interp-desc muted">(no description in pumpx2)</div>';
     return (
       '<div class="interp">' +
       '<div class="interp-head">' +
-      '<span class="tag tag-' +
-      i.category.toLowerCase() +
-      '">' +
-      esc(i.categoryLabel) +
+      '<span class="bit-chip">bit ' +
+      e.bit +
       "</span>" +
       '<span class="mono interp-name">' +
-      esc(humanize(i.name)) +
+      esc(humanize(e.name)) +
       "</span>" +
       "</div>" +
       desc +
@@ -62,7 +54,38 @@
     );
   }
 
-  function render(parsed) {
+  function categoryBlock(cat) {
+    let html = "";
+    html +=
+      '<h3 class="section-title"><span class="tag tag-' +
+      cat.key.toLowerCase() +
+      '">' +
+      esc(cat.label) +
+      "</span></h3>";
+
+    if (cat.entries.length) {
+      html += '<div class="interps">';
+      html += cat.entries.map(entryRow).join("");
+      html += "</div>";
+    } else {
+      html +=
+        '<p class="section-note">No defined ' +
+        esc(cat.label.toLowerCase()) +
+        " entries match the set bits.</p>";
+    }
+
+    if (cat.undefinedBits.length) {
+      html +=
+        '<p class="section-note">Set bits with no defined ' +
+        esc(cat.label.toLowerCase()) +
+        " mapping: " +
+        cat.undefinedBits.map((b) => "bit " + b).join(", ") +
+        ".</p>";
+    }
+    return html;
+  }
+
+  function render(parsed, selected) {
     result.hidden = false;
 
     if (!parsed.ok) {
@@ -75,90 +98,43 @@
     result.classList.add("is-ok");
     result.classList.remove("is-error");
 
-    const banners = [];
-    if (parsed.ignorable) {
-      banners.push(
-        '<div class="banner banner-warn"><strong>Likely not a real malfunction.</strong> ' +
-          esc(parsed.ignorable) +
-          "</div>"
-      );
-    }
-    if (parsed.known) {
-      banners.push(
-        '<div class="banner banner-info"><strong>Known code:</strong> ' +
-          esc(parsed.known) +
-          "</div>"
-      );
-    }
-    if (!parsed.ignorable && parsed.concurrent.length) {
-      const names = parsed.concurrent
-        .map(function (c) {
-          return c.categoryLabel + " “" + humanize(c.name) + "”";
-        })
-        .join(", ");
-      banners.push(
-        '<div class="banner banner-info">This id (' +
-          parsed.aamId +
-          ") is also used by: " +
-          esc(names) +
-          ". If one of those was active at the same time, this code may be a side effect of it rather than a true malfunction."
-      );
-    }
-
-    const malf = parsed.malfunction;
-    const subsystem = malf
-      ? esc(malf.description) +
-        ' <span class="mono">(' +
-        esc(malf.name) +
-        ", bit " +
-        parsed.aamId +
-        ")</span>"
-      : '<span class="unknown">Not a known malfunction subsystem (aamId ' +
-        parsed.aamId +
-        " is outside the malfunction range 0–25)</span>";
-
     let html = "";
-    html += '<h2 class="result-code mono">' + esc(parsed.canonical) + "</h2>";
-    html += banners.join("");
-
-    html += '<div class="details">';
-    html += row("Malfunction subsystem", subsystem);
-    html += row("aamId", '<span class="mono">' + parsed.aamId + "</span>");
     html +=
-      row(
-        "faultId",
-        '<span class="mono">' +
-          esc(parsed.faultHex) +
-          '</span> <span class="muted">(' +
-          parsed.faultDecimal +
-          " decimal)</span>"
-      );
-    html += "</div>";
+      '<h2 class="result-code mono">' +
+      esc(parsed.valueHex) +
+      '</h2><p class="section-note">' +
+      esc(parsed.valueDec) +
+      " decimal &middot; set bits: " +
+      (parsed.bits.length ? parsed.bits.join(", ") : "none") +
+      "</p>";
 
-    // Cross-category interpretations of the shared aamId.
-    if (parsed.interpretations.length) {
-      html +=
-        '<h3 class="section-title">aamId ' +
-        parsed.aamId +
-        " across all notification categories</h3>";
-      html +=
-        '<p class="section-note">The aamId is a shared bit index; the same number ' +
-        "means different things depending on the notification category.</p>";
-      html += '<div class="interps">';
-      html += parsed.interpretations.map(interpRow).join("");
-      html += "</div>";
-    }
+    const cats =
+      selected === "ALL"
+        ? parsed.categories
+        : parsed.categories.filter((c) => c.key === selected);
+
+    html += cats.map(categoryBlock).join("");
 
     result.innerHTML = html;
   }
 
   function run() {
-    render(parseMalfunctionCode(input.value));
+    const value = input.value.trim();
+    // Persist the entered code in the URL hash so it can be shared / restored.
+    const newHash = value ? "#" + encodeURIComponent(value) : "";
+    if (newHash !== window.location.hash) {
+      history.replaceState(null, "", window.location.pathname + window.location.search + newHash);
+    }
+    render(decodeBitmask(input.value), categorySelect.value);
   }
 
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     run();
+  });
+
+  categorySelect.addEventListener("change", function () {
+    if (input.value.trim()) run();
   });
 
   document.querySelectorAll(".example").forEach(function (btn) {
@@ -169,11 +145,13 @@
     });
   });
 
-  // Support deep-linking via ?code= or #code
+  // Support deep-linking via ?code=&cat=
   const params = new URLSearchParams(window.location.search);
   const initial =
     params.get("code") ||
     decodeURIComponent(window.location.hash.replace(/^#/, ""));
+  const cat = params.get("cat");
+  if (cat) categorySelect.value = cat.toUpperCase();
   if (initial) {
     input.value = initial;
     run();

@@ -3,52 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tandem Malfunction Code Parser</title>
+    <title>Tandem Malfunction Bitmask Parser</title>
     <meta
       name="description"
-      content="Decode Tandem t:slim X2 / Mobi malfunction codes (aamId-0xfaultId)."
+      content="Decode Tandem t:slim X2 / Mobi malfunction (and alert/alarm/CGM/reminder) bitmask values into the affected subsystems."
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="container">
       <header>
-        <h1>Tandem Malfunction Code Parser</h1>
+        <h1>Tandem Malfunction Bitmask Parser</h1>
         <p class="subtitle">
-          Decode a Tandem t:slim X2 / Mobi malfunction code into its subsystem
-          and fault details, cross-referenced against every alert, alarm, CGM
-          alert, and reminder that shares the same id.
+          Decode a Tandem t:slim X2 / Mobi status bitmask into the subsystems /
+          notifications it represents. Each set bit maps to one entry, exactly
+          like pumpx2's <code>MalfunctionBitmaskStatusResponse</code> and the
+          alert/alarm/CGM/reminder status responses.
         </p>
       </header>
 
       <section class="card">
-        <label for="code-input" class="field-label">Malfunction code</label>
         <form id="parse-form" autocomplete="off">
+          <label for="code-input" class="field-label">Bitmask value</label>
           <div class="input-row">
             <input
               id="code-input"
               type="text"
               inputmode="text"
               spellcheck="false"
-              placeholder="e.g. 12-0x2071"
+              placeholder="e.g. 4096 or 0x1000"
               aria-describedby="input-hint"
             />
-            <button type="submit">Parse</button>
+            <button type="submit">Decode</button>
           </div>
+
+          <label for="category-select" class="field-label">Interpret as</label>
+          <select id="category-select">
+            <option value="ALL">All categories</option>
+            <option value="MALFUNCTION" selected>Malfunction</option>
+            <option value="ALARM">Alarm</option>
+            <option value="ALERT">Alert</option>
+            <option value="CGM_ALERT">CGM Alert</option>
+            <option value="REMINDER">Reminder</option>
+          </select>
+
           <p id="input-hint" class="hint">
-            Format: <code>aamId-0xfaultId</code> (the code shown on the pump
-            screen). Examples:
-            <button type="button" class="example" data-code="12-0x2071">
-              12-0x2071
+            Accepts decimal (<code>4096</code>), hex (<code>0x1000</code>), or a
+            <code>codeA, codeB</code> pair. Examples:
+            <button type="button" class="example" data-code="0x1000">
+              0x1000
             </button>
-            <button type="button" class="example" data-code="2-0x1004">
-              2-0x1004
-            </button>
-            <button type="button" class="example" data-code="3-0x2026">
-              3-0x2026
-            </button>
-            <button type="button" class="example" data-code="18-0x2077">
-              18-0x2077
+            <button type="button" class="example" data-code="4097">4097</button>
+            <button type="button" class="example" data-code="0x2000005">
+              0x2000005
             </button>
           </p>
         </form>
@@ -61,10 +68,7 @@
           All subsystem, alert, alarm, CGM-alert and reminder names and
           descriptions are derived from
           <a href="https://github.com/jwoglom/pumpx2" rel="noopener">pumpx2</a>.
-          This tool reliably decodes the <em>structure</em> of a code; the
-          specific meaning of a <code>faultId</code> is largely
-          community-sourced and unofficial. Not affiliated with Tandem Diabetes
-          Care.
+          Not affiliated with Tandem Diabetes Care.
         </p>
       </footer>
     </main>
