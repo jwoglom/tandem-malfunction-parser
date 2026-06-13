@@ -24,14 +24,14 @@
 
       <section class="card">
         <form id="parse-form" autocomplete="off">
-          <label for="code-input" class="field-label">Bitmask value</label>
+          <label for="code-input" class="field-label">Malfunction code</label>
           <div class="input-row">
             <input
               id="code-input"
               type="text"
               inputmode="text"
               spellcheck="false"
-              placeholder="e.g. 4096 or 0x1000"
+              placeholder="e.g. 2-0x20b0 or 0x1000"
               aria-describedby="input-hint"
             />
             <button type="submit">Decode</button>
@@ -48,12 +48,15 @@
           </select>
 
           <p id="input-hint" class="hint">
-            Accepts decimal (<code>4096</code>), hex (<code>0x1000</code>), or a
-            <code>codeA, codeB</code> pair. Examples:
+            Accepts the displayed <code>codeA-0xcodeB</code> form
+            (<code>2-0x20b0</code>), a single decimal (<code>4096</code>) or hex
+            (<code>0x1000</code>) value. Examples:
+            <button type="button" class="example" data-code="2-0x20b0">
+              2-0x20b0
+            </button>
             <button type="button" class="example" data-code="0x1000">
               0x1000
             </button>
-            <button type="button" class="example" data-code="4097">4097</button>
             <button type="button" class="example" data-code="0x2000005">
               0x2000005
             </button>
