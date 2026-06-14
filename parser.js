@@ -217,9 +217,11 @@ function lookup(table, index) {
  *   - hex with prefix:        0x1000
  *   - hex without prefix:     1000a (any token containing a-f)
  *   - decimal:                4096
- *   - two comma/space halves: "codeA, codeB" -> codeA | (codeB << 32)
+ *   - codeA / codeB pair:     "2-0x20b0", "2, 0x20b0", "2 0x20b0"
+ *                             -> codeA | (codeB << 32)
  *                             (matches MalfunctionBitmaskStatusResponse(codeA, codeB),
- *                              which stores them little-endian as one uint64)
+ *                              which stores them little-endian as one uint64.
+ *                              This is the displayed "codeA-0xcodeB" form.)
  * @returns {BigInt|null}
  */
 function toBitmaskValue(input) {
@@ -227,7 +229,8 @@ function toBitmaskValue(input) {
   if (!s) return null;
 
   // codeA / codeB pair (two 32-bit halves combined little-endian).
-  const pair = s.split(/\s*[,;]\s*|\s+/).filter(Boolean);
+  // Separators: dash (the displayed form), comma, semicolon, or whitespace.
+  const pair = s.split(/\s*[,;-]\s*|\s+/).filter(Boolean);
   if (pair.length === 2) {
     const a = parseSingle(pair[0]);
     const b = parseSingle(pair[1]);
