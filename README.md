@@ -14,7 +14,7 @@ the same way Tandem's app does: `<aamId>-0x<faultId in hex>`.
 - `aamId` is the malfunction's bit in `MalfunctionBitmaskStatusResponse`, so
   `12` is `VIBE`.
 - `faultId` is a fault-locator value. Tandem doesn't publish what the values
-  mean; the page notes the few pumpX2's tests identify.
+  mean; the page notes the few that pumpX2's tests identify.
 
 Alarms, alerts, CGM alerts and reminders number their bits from 0 as well.
 pumpX2 and TandemKit don't report a code as a malfunction when it is one of
@@ -30,10 +30,13 @@ Links: `#12-0x2071` for a code, `#ALARM:0x22` for a bitmask.
 
 ## Updating the tables
 
-`data.js` is generated from pumpX2's enums, which TandemKit mirrors:
+`data.js` is generated from pumpX2's enums on its `dev` branch, and the script
+stops without writing if TandemKit's `dev` branch disagrees with them:
 
 ```
-scripts/sync_pumpx2.py ../pumpX2 --ref origin/dev
+git -C ../pumpX2 fetch origin dev
+git -C ../TandemKit fetch origin dev
+scripts/sync_pumpx2.py ../pumpX2 ../TandemKit
 node --test
 ```
 

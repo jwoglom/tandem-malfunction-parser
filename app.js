@@ -7,7 +7,8 @@
   const mode = document.getElementById("mode");
   const result = document.getElementById("result");
 
-  document.getElementById("source").textContent = P.source;
+  document.getElementById("pumpx2-version").textContent = P.versions.pumpx2;
+  document.getElementById("tandemkit-version").textContent = P.versions.tandemkit;
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");

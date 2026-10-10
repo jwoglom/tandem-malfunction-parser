@@ -145,7 +145,7 @@
     return decodeBitmask(value, mode);
   }
 
-  const api = { CATEGORIES, decode, decodeCode, decodeBitmask, source: PUMPX2.source };
+  const api = { CATEGORIES, decode, decodeCode, decodeBitmask, versions: { pumpx2: PUMPX2.pumpx2, tandemkit: PUMPX2.tandemkit } };
   if (typeof module !== "undefined") module.exports = api;
   else root.MalfunctionParser = api;
 })(this);
