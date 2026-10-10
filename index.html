@@ -19,17 +19,8 @@
       </p>
 
       <form id="form" autocomplete="off">
-        <label for="input" class="visually-hidden">Code or bitmask</label>
+        <label for="input" class="visually-hidden">Malfunction code</label>
         <input id="input" type="text" spellcheck="false" placeholder="12-0x2071" />
-        <label for="mode" class="visually-hidden">Read as</label>
-        <select id="mode">
-          <option value="CODE">Malfunction code</option>
-          <option value="MALFUNCTION">Malfunction bitmask</option>
-          <option value="ALARM">Alarm bitmask</option>
-          <option value="ALERT">Alert bitmask</option>
-          <option value="CGM_ALERT">CGM alert bitmask</option>
-          <option value="REMINDER">Reminder bitmask</option>
-        </select>
         <button type="submit">Look up</button>
       </form>
 
@@ -48,7 +39,6 @@
           (<span id="pumpx2-version"></span>) and
           <a href="https://github.com/jwoglom/TandemKit/tree/dev">TandemKit</a>
           (<span id="tandemkit-version"></span>), which agree.
-          The bitmask types decode the raw value of pumpX2's status responses.
         </p>
       </footer>
     </main>

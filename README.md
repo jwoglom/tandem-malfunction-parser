@@ -21,12 +21,7 @@ pumpX2 and TandemKit don't report a code as a malfunction when it is one of
 `HighestAamResponse.IGNORABLE_CODES`, or when a known notification with the same
 number is active (`matchesKnownIds`), so the page lists those too.
 
-Choosing a bitmask type instead reads a single number as the raw uint64 of
-that status response (`MalfunctionBitmaskStatusResponse`, `AlarmStatusResponse`,
-`AlertStatusResponse`, `CGMAlertStatusResponse`, `ReminderStatusResponse`) and
-lists the set bits.
-
-Links: `#12-0x2071` for a code, `#ALARM:0x22` for a bitmask.
+Link to a code with `#12-0x2071`.
 
 ## Updating the tables
 
