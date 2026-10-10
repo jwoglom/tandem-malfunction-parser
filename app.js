@@ -82,15 +82,12 @@
     result.innerHTML = r.error ? '<p class="error">' + esc(r.error) + "</p>" : render(r);
   }
 
-  // #12-0x2071, or the older ?code= links.
-  function loadFromUrl() {
-    let value = new URLSearchParams(location.search).get("code");
-    if (value === null) {
-      try {
-        value = decodeURIComponent(location.hash.slice(1));
-      } catch (e) {
-        return;
-      }
+  function loadFromHash() {
+    let value;
+    try {
+      value = decodeURIComponent(location.hash.slice(1));
+    } catch (e) {
+      return;
     }
     if (!value) return;
     input.value = value;
@@ -101,7 +98,7 @@
     e.preventDefault();
     run();
   });
-  window.addEventListener("hashchange", loadFromUrl);
+  window.addEventListener("hashchange", loadFromHash);
 
-  loadFromUrl();
+  loadFromHash();
 })();
