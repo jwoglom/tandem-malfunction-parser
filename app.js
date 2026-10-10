@@ -4,7 +4,6 @@
   const P = window.MalfunctionParser;
   const form = document.getElementById("form");
   const input = document.getElementById("input");
-  const mode = document.getElementById("mode");
   const result = document.getElementById("result");
 
   document.getElementById("pumpx2-version").textContent = P.versions.pumpx2;
@@ -30,7 +29,7 @@
     return "<tr><th>" + th + "</th><td>" + td + "</td></tr>";
   }
 
-  function renderCode(r) {
+  function render(r) {
     let html = "<h2><code>" + esc(r.code) + "</code></h2>";
 
     if (r.empty) {
@@ -53,14 +52,12 @@
     );
     html += row(
       "Fault ID",
-      r.faultId === null
-        ? '<span class="muted">Not given.</span>'
-        : "<code>0x" +
-            r.faultId.toString(16) +
-            "</code> (" +
-            r.faultId +
-            ")" +
-            sub("Where the pump detected the fault. Tandem doesn't publish what the values mean.")
+      "<code>0x" +
+        r.faultId.toString(16) +
+        "</code> (" +
+        r.faultId +
+        ")" +
+        sub("Where the pump detected the fault. Tandem doesn't publish what the values mean.")
     );
     html += "</table>";
 
@@ -76,62 +73,26 @@
     return html;
   }
 
-  function renderBitmask(r) {
-    let html = "<h2><code>" + esc(r.hex) + "</code></h2>";
-    html +=
-      '<p class="muted">' +
-      esc(r.dec) +
-      ", read as " +
-      esc(r.label.toLowerCase()) +
-      " bitmask</p>";
-    if (!r.bits.length) return html + "<p>No bits set.</p>";
-
-    html += "<table><tr><th>Bit</th><th>Name</th></tr>";
-    html += r.bits
-      .map((b) =>
-        row(
-          String(b.bit),
-          b.entry ? nameCell(b.entry, b.gloss) : '<span class="muted">Not defined in pumpX2.</span>'
-        )
-      )
-      .join("");
-    return html + "</table>";
-  }
-
-  function show(r) {
-    if (r.error) result.innerHTML = '<p class="error">' + esc(r.error) + "</p>";
-    else result.innerHTML = r.kind === "code" ? renderCode(r) : renderBitmask(r);
-  }
-
   function run() {
-    const r = P.decode(input.value, mode.value);
-    if (r.kind === "code") mode.value = "CODE";
-
     const value = input.value.trim();
-    const hash = !value ? "" : "#" + (mode.value === "CODE" ? "" : mode.value + ":") + encodeURIComponent(value);
+    const r = P.decode(value);
+    const hash = r.code ? "#" + r.code : value ? "#" + encodeURIComponent(value) : "";
     if (hash !== location.hash) history.replaceState(null, "", location.pathname + hash);
 
-    show(r);
+    result.innerHTML = r.error ? '<p class="error">' + esc(r.error) + "</p>" : render(r);
   }
 
-  // #12-0x2071, #ALARM:0x1000, and the older ?code=&cat= links.
+  // #12-0x2071, or the older ?code= links.
   function loadFromUrl() {
-    const params = new URLSearchParams(location.search);
-    let value = params.get("code");
-    let m = (params.get("cat") || "").toUpperCase();
+    let value = new URLSearchParams(location.search).get("code");
     if (value === null) {
-      let hash = "";
       try {
-        hash = decodeURIComponent(location.hash.slice(1));
+        value = decodeURIComponent(location.hash.slice(1));
       } catch (e) {
         return;
       }
-      const split = hash.match(/^([A-Z_]+):(.*)$/);
-      value = split ? split[2] : hash;
-      m = split ? split[1] : "CODE";
     }
     if (!value) return;
-    mode.value = [...mode.options].some((o) => o.value === m) ? m : "MALFUNCTION";
     input.value = value;
     run();
   }
@@ -139,9 +100,6 @@
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     run();
-  });
-  mode.addEventListener("change", () => {
-    if (input.value.trim()) run();
   });
   window.addEventListener("hashchange", loadFromUrl);
 
