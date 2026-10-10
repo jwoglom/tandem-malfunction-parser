@@ -2,80 +2,58 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tandem Malfunction Bitmask Parser</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tandem Malfunction Codes</title>
     <meta
       name="description"
-      content="Decode Tandem t:slim X2 / Mobi malfunction (and alert/alarm/CGM/reminder) bitmask values into the affected subsystems."
+      content="Look up the malfunction code a Tandem t:slim X2 or Mobi pump shows, using pumpX2's tables."
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="container">
-      <header>
-        <h1>Tandem Malfunction Bitmask Parser</h1>
-        <p class="subtitle">
-          Decode a Tandem t:slim X2 / Mobi status bitmask into the subsystems /
-          notifications it represents. Each set bit maps to one entry, exactly
-          like pumpx2's <code>MalfunctionBitmaskStatusResponse</code> and the
-          alert/alarm/CGM/reminder status responses.
-        </p>
-      </header>
+    <main>
+      <h1>Tandem malfunction codes</h1>
+      <p>
+        Look up the malfunction code a t:slim X2 or Mobi pump shows, for example
+        <a href="#12-0x2071">12-0x2071</a>.
+      </p>
 
-      <section class="card">
-        <form id="parse-form" autocomplete="off">
-          <label for="code-input" class="field-label">Malfunction code</label>
-          <div class="input-row">
-            <input
-              id="code-input"
-              type="text"
-              inputmode="text"
-              spellcheck="false"
-              placeholder="e.g. 2-0x20b0 or 0x1000"
-              aria-describedby="input-hint"
-            />
-            <button type="submit">Decode</button>
-          </div>
+      <form id="form" autocomplete="off">
+        <label for="input" class="visually-hidden">Code or bitmask</label>
+        <input id="input" type="text" spellcheck="false" placeholder="12-0x2071" />
+        <label for="mode" class="visually-hidden">Read as</label>
+        <select id="mode">
+          <option value="CODE">Malfunction code</option>
+          <option value="MALFUNCTION">Malfunction bitmask</option>
+          <option value="ALARM">Alarm bitmask</option>
+          <option value="ALERT">Alert bitmask</option>
+          <option value="CGM_ALERT">CGM alert bitmask</option>
+          <option value="REMINDER">Reminder bitmask</option>
+        </select>
+        <button type="submit">Look up</button>
+      </form>
 
-          <label for="category-select" class="field-label">Interpret as</label>
-          <select id="category-select">
-            <option value="ALL">All categories</option>
-            <option value="MALFUNCTION" selected>Malfunction</option>
-            <option value="ALARM">Alarm</option>
-            <option value="ALERT">Alert</option>
-            <option value="CGM_ALERT">CGM Alert</option>
-            <option value="REMINDER">Reminder</option>
-          </select>
-
-          <p id="input-hint" class="hint">
-            Accepts the displayed <code>codeA-0xcodeB</code> form
-            (<code>2-0x20b0</code>), a single decimal (<code>4096</code>) or hex
-            (<code>0x1000</code>) value. Examples:
-            <button type="button" class="example" data-code="2-0x20b0">
-              2-0x20b0
-            </button>
-            <button type="button" class="example" data-code="0x1000">
-              0x1000
-            </button>
-            <button type="button" class="example" data-code="0x2000005">
-              0x2000005
-            </button>
-          </p>
-        </form>
-      </section>
-
-      <section id="result" class="card result" hidden aria-live="polite"></section>
+      <div id="result" aria-live="polite"></div>
 
       <footer>
         <p>
-          All subsystem, alert, alarm, CGM-alert and reminder names and
-          descriptions are derived from
-          <a href="https://github.com/jwoglom/pumpx2" rel="noopener">pumpx2</a>.
-          Not affiliated with Tandem Diabetes Care.
+          A pump malfunction stops insulin delivery. If your pump shows one,
+          contact Tandem Technical Support and follow the backup plan from your
+          care team for taking insulin another way. This page is not medical
+          advice and is not affiliated with Tandem Diabetes Care.
+        </p>
+        <p>
+          Names and descriptions come from
+          <a href="https://github.com/jwoglom/pumpX2/tree/dev">pumpX2</a>
+          (<span id="pumpx2-version"></span>) and
+          <a href="https://github.com/jwoglom/TandemKit/tree/dev">TandemKit</a>
+          (<span id="tandemkit-version"></span>), which agree.
+          The bitmask types decode the raw value of pumpX2's status responses.
         </p>
       </footer>
     </main>
 
+    <script src="data.js"></script>
     <script src="parser.js"></script>
     <script src="app.js"></script>
   </body>
