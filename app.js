@@ -1,159 +1,148 @@
-/* UI glue for the Tandem malfunction bitmask parser. */
 (function () {
   "use strict";
 
-  const form = document.getElementById("parse-form");
-  const input = document.getElementById("code-input");
-  const categorySelect = document.getElementById("category-select");
+  const P = window.MalfunctionParser;
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const mode = document.getElementById("mode");
   const result = document.getElementById("result");
 
+  document.getElementById("source").textContent = P.source;
+
   function esc(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      }[c];
-    });
+    return String(s).replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
   }
 
-  // CARTRIDGE_ALARM2 -> "Cartridge Alarm 2"
-  function humanize(name) {
-    return String(name)
-      .toLowerCase()
-      .replace(/_/g, " ")
-      .replace(/\b([a-z])/g, function (_, c) {
-        return c.toUpperCase();
-      })
-      .replace(
-        /\b(Cgm|Iq|Usb|Bg|Rtc|Msp|Arm|Ble|Btle|Ap|P2|Lipo|Nvm)\b/gi,
-        function (w) {
-          return w.toUpperCase();
-        }
-      );
+  function sub(html) {
+    return '<span class="sub">' + html + "</span>";
   }
 
-  function entryRow(e) {
-    const desc = e.description
-      ? '<div class="interp-desc">' + esc(e.description) + "</div>"
-      : '<div class="interp-desc muted">(no description in pumpx2)</div>';
-    return (
-      '<div class="interp">' +
-      '<div class="interp-head">' +
-      '<span class="bit-chip">bit ' +
-      e.bit +
-      "</span>" +
-      '<span class="mono interp-name">' +
-      esc(humanize(e.name)) +
-      "</span>" +
-      "</div>" +
-      desc +
-      "</div>"
-    );
+  function nameCell(e, gloss) {
+    let html = "<code>" + esc(e.name) + "</code>";
+    if (gloss) html += sub(esc(gloss));
+    if (e.desc) html += sub(esc(e.desc));
+    if (e.firmware) html += sub("Tandem name: <code>" + esc(e.firmware) + "</code>");
+    return html;
   }
 
-  function categoryBlock(cat) {
-    let html = "";
-    html +=
-      '<h3 class="section-title"><span class="tag tag-' +
-      cat.key.toLowerCase() +
-      '">' +
-      esc(cat.label) +
-      "</span></h3>";
+  function row(th, td) {
+    return "<tr><th>" + th + "</th><td>" + td + "</td></tr>";
+  }
 
-    if (cat.entries.length) {
-      html += '<div class="interps">';
-      html += cat.entries.map(entryRow).join("");
-      html += "</div>";
-    } else {
+  function renderCode(r) {
+    let html = "<h2><code>" + esc(r.code) + "</code></h2>";
+
+    if (r.empty) {
+      html += '<p class="note">0-0x0 means no malfunction.</p>';
+    } else if (r.ignorable) {
       html +=
-        '<p class="section-note">No defined ' +
-        esc(cat.label.toLowerCase()) +
-        " entries match the set bits.</p>";
+        '<p class="note">pumpX2 and TandemKit don\'t report this code as a malfunction.' +
+        (r.note ? " " + esc(r.note) : "") +
+        "</p>";
+    } else if (r.note) {
+      html += "<p>" + esc(r.note) + "</p>";
     }
 
-    if (cat.undefinedBits.length) {
+    html += "<table>";
+    html += row(
+      "Malfunction " + r.aamId,
+      r.malfunction
+        ? nameCell(r.malfunction, r.gloss)
+        : '<span class="muted">Not in pumpX2\'s malfunction table.</span>'
+    );
+    html += row(
+      "Fault ID",
+      r.faultId === null
+        ? '<span class="muted">Not given.</span>'
+        : "<code>0x" +
+            r.faultId.toString(16) +
+            "</code> (" +
+            r.faultId +
+            ")" +
+            sub("Where the pump detected the fault. Tandem doesn't publish what the values mean.")
+    );
+    html += "</table>";
+
+    if (r.sameId.length) {
+      html += "<h3>Other notifications numbered " + r.aamId + "</h3>";
       html +=
-        '<p class="section-note">Set bits with no defined ' +
-        esc(cat.label.toLowerCase()) +
-        " mapping: " +
-        cat.undefinedBits.map((b) => "bit " + b).join(", ") +
-        ".</p>";
+        "<p>Alarms, alerts, CGM alerts and reminders are numbered from 0 too. " +
+        "pumpX2 and TandemKit don't treat this code as a malfunction while one of these is active:</p>";
+      html += "<table>";
+      html += r.sameId.map((s) => row(esc(s.category), nameCell(s.entry))).join("");
+      html += "</table>";
     }
     return html;
   }
 
-  function render(parsed, selected) {
-    result.hidden = false;
-
-    if (!parsed.ok) {
-      result.classList.add("is-error");
-      result.classList.remove("is-ok");
-      result.innerHTML = '<p class="error-msg">' + esc(parsed.error) + "</p>";
-      return;
-    }
-
-    result.classList.add("is-ok");
-    result.classList.remove("is-error");
-
-    let html = "";
+  function renderBitmask(r) {
+    let html = "<h2><code>" + esc(r.hex) + "</code></h2>";
     html +=
-      '<h2 class="result-code mono">' +
-      esc(parsed.valueHex) +
-      '</h2><p class="section-note">' +
-      esc(parsed.valueDec) +
-      " decimal &middot; set bits: " +
-      (parsed.bits.length ? parsed.bits.join(", ") : "none") +
-      "</p>";
+      '<p class="muted">' +
+      esc(r.dec) +
+      ", read as " +
+      esc(r.label.toLowerCase()) +
+      " bitmask</p>";
+    if (!r.bits.length) return html + "<p>No bits set.</p>";
 
-    const cats =
-      selected === "ALL"
-        ? parsed.categories
-        : parsed.categories.filter((c) => c.key === selected);
+    html += "<table><tr><th>Bit</th><th>Name</th></tr>";
+    html += r.bits
+      .map((b) =>
+        row(
+          String(b.bit),
+          b.entry ? nameCell(b.entry, b.gloss) : '<span class="muted">Not defined in pumpX2.</span>'
+        )
+      )
+      .join("");
+    return html + "</table>";
+  }
 
-    html += cats.map(categoryBlock).join("");
-
-    result.innerHTML = html;
+  function show(r) {
+    if (r.error) result.innerHTML = '<p class="error">' + esc(r.error) + "</p>";
+    else result.innerHTML = r.kind === "code" ? renderCode(r) : renderBitmask(r);
   }
 
   function run() {
+    const r = P.decode(input.value, mode.value);
+    if (r.kind === "code") mode.value = "CODE";
+
     const value = input.value.trim();
-    // Persist the entered code in the URL hash so it can be shared / restored.
-    const newHash = value ? "#" + encodeURIComponent(value) : "";
-    if (newHash !== window.location.hash) {
-      history.replaceState(null, "", window.location.pathname + window.location.search + newHash);
-    }
-    render(decodeBitmask(input.value), categorySelect.value);
+    const hash = !value ? "" : "#" + (mode.value === "CODE" ? "" : mode.value + ":") + encodeURIComponent(value);
+    if (hash !== location.hash) history.replaceState(null, "", location.pathname + hash);
+
+    show(r);
   }
 
-  form.addEventListener("submit", function (e) {
+  // #12-0x2071, #ALARM:0x1000, and the older ?code=&cat= links.
+  function loadFromUrl() {
+    const params = new URLSearchParams(location.search);
+    let value = params.get("code");
+    let m = (params.get("cat") || "").toUpperCase();
+    if (value === null) {
+      let hash = "";
+      try {
+        hash = decodeURIComponent(location.hash.slice(1));
+      } catch (e) {
+        return;
+      }
+      const split = hash.match(/^([A-Z_]+):(.*)$/);
+      value = split ? split[2] : hash;
+      m = split ? split[1] : "CODE";
+    }
+    if (!value) return;
+    mode.value = [...mode.options].some((o) => o.value === m) ? m : "MALFUNCTION";
+    input.value = value;
+    run();
+  }
+
+  form.addEventListener("submit", (e) => {
     e.preventDefault();
     run();
   });
-
-  categorySelect.addEventListener("change", function () {
+  mode.addEventListener("change", () => {
     if (input.value.trim()) run();
   });
+  window.addEventListener("hashchange", loadFromUrl);
 
-  document.querySelectorAll(".example").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      input.value = btn.getAttribute("data-code");
-      run();
-      input.focus();
-    });
-  });
-
-  // Support deep-linking via ?code=&cat=
-  const params = new URLSearchParams(window.location.search);
-  const initial =
-    params.get("code") ||
-    decodeURIComponent(window.location.hash.replace(/^#/, ""));
-  const cat = params.get("cat");
-  if (cat) categorySelect.value = cat.toUpperCase();
-  if (initial) {
-    input.value = initial;
-    run();
-  }
+  loadFromUrl();
 })();
